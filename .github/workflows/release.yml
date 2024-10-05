@@ -20,18 +20,34 @@ jobs:
         with:
           go-version: "1.23.1"
 
-      - name: Build binary
-        run: |
-          go build -v -o semver-calculator
-          tar -czvf semver-calculator-linux-amd64.tar.gz semver-calculator
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
 
-      - name: Calculate checksum
-        run: sha256sum semver-calculator-linux-amd64.tar.gz > semver-calculator-linux-amd64.tar.gz.sha256
+      - name: Build binaries
+        run: |
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+
+          # Build for Linux amd64
+          GOOS=linux GOARCH=amd64 go build -v -o semver-calculator-linux-amd64
+          tar -czvf semver-calculator_${VERSION}_linux_amd64.tar.gz semver-calculator-linux-amd64
+
+          # Build for macOS arm64 (Apple Silicon)
+          GOOS=darwin GOARCH=arm64 go build -v -o semver-calculator-darwin-arm64
+          tar -czvf semver-calculator_${VERSION}_darwin_arm64.tar.gz semver-calculator-darwin-arm64
+
+      - name: Calculate checksums
+        run: |
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          sha256sum semver-calculator_${VERSION}_linux_amd64.tar.gz > semver-calculator_${VERSION}_linux_amd64.tar.gz.sha256
+          sha256sum semver-calculator_${VERSION}_darwin_arm64.tar.gz > semver-calculator_${VERSION}_darwin_arm64.tar.gz.sha256
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            semver-calculator-linux-amd64.tar.gz
-            semver-calculator-linux-amd64.tar.gz.sha256
+            semver-calculator_${{ steps.get_version.outputs.VERSION }}_linux_amd64.tar.gz
+            semver-calculator_${{ steps.get_version.outputs.VERSION }}_linux_amd64.tar.gz.sha256
+            semver-calculator_${{ steps.get_version.outputs.VERSION }}_darwin_arm64.tar.gz
+            semver-calculator_${{ steps.get_version.outputs.VERSION }}_darwin_arm64.tar.gz.sha256
           generate_release_notes: true
