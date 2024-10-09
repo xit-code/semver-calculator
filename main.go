@@ -101,6 +101,9 @@ func getSemverTags() ([]SemVer, error) {
 
 	for _, tag := range tags {
 		tag = strings.TrimSpace(tag)
+		if tag == "" {
+			continue
+		}
 		if matches := semverRegex.FindStringSubmatch(tag); matches != nil {
 			major, _ := strconv.Atoi(matches[1])
 			minor, _ := strconv.Atoi(matches[2])
@@ -110,7 +113,8 @@ func getSemverTags() ([]SemVer, error) {
 	}
 
 	if len(semverTags) == 0 {
-		return nil, fmt.Errorf("no valid semver tags found")
+		// No existing semver tags found; start from v0.0.0
+		semverTags = append(semverTags, SemVer{Major: 0, Minor: 0, Patch: 0})
 	}
 
 	sort.Slice(semverTags, func(i, j int) bool {
